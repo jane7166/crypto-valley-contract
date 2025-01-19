@@ -148,7 +148,7 @@ contract CV is ERC20 {
     }
 
     // 해시 생성
-    function getOptionHash(string memory _data) internal view returns(bytes32) {
+    function getOptionHash(string memory _data) internal view returns (bytes32) {
         return keccak256(abi.encodePacked(msg.sender, block.timestamp, _data));
     }
 }
