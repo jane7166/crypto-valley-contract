@@ -7,7 +7,7 @@ struct Recommend {
     bool submitted;
     address owner;
     uint256 good; // 좋아요 수
-    uint256 bad;  // 싫어요 수
+    uint256 bad; // 싫어요 수
 }
 
 struct Subscribe {
@@ -21,11 +21,11 @@ contract CV is ERC20 {
     uint256 public lastupdated;
     address public owner;
 
-    mapping (string => mapping(bytes32 => Recommend)) private votes; // 추천 의견
-    mapping (address => mapping(string => Subscribe)) public Subscribers; // 무료 구독자 
+    mapping(string => mapping(bytes32 => Recommend)) private votes; // 추천 의견
+    mapping(address => mapping(string => Subscribe)) public Subscribers; // 무료 구독자
     uint256 public totalSubscriptionAmount; // 총 구독료
-    mapping (address => uint256) private rewards; // 각 추천에 대한 보상
-    mapping (string => bool) public tokenWhitelist;
+    mapping(address => uint256) private rewards; // 각 추천에 대한 보상
+    mapping(string => bool) public tokenWhitelist;
 
     event OptionSubmitted(bytes32 indexed optionHash, address indexed owner);
     event Voted(bytes32 indexed optionHash, address indexed voter, bool like);
@@ -59,31 +59,36 @@ contract CV is ERC20 {
         totalSubscriptionAmount = 0;
     }
 
-    // 의견 제출 
-    function submitOption(string memory tokenType, string memory _data) external Checksub(tokenType) returns(bytes32) {
+    // 의견 제출
+    function submitOption(string memory tokenType, string memory _data)
+        external
+        Checksub(tokenType)
+        returns (bytes32)
+    {
         require(tokenWhitelist[tokenType], "token denied");
-        if (keccak256(abi.encodePacked(tokenType)) != keccak256("BTC") && keccak256(abi.encodePacked(tokenType)) != keccak256("ETH")) {
+        if (
+            keccak256(abi.encodePacked(tokenType)) != keccak256("BTC")
+                && keccak256(abi.encodePacked(tokenType)) != keccak256("ETH")
+        ) {
             require(Subscribers[msg.sender][tokenType].subscribe, "you are not subscriber");
         }
         bytes32 dataHash = getOptionHash(_data);
 
         require(!votes[tokenType][dataHash].submitted, "Option already submitted");
-        
-        votes[tokenType][dataHash] = Recommend({
-            submitted: true,
-            owner: msg.sender,
-            good: 0,
-            bad: 0
-        });
+
+        votes[tokenType][dataHash] = Recommend({submitted: true, owner: msg.sender, good: 0, bad: 0});
 
         emit OptionSubmitted(dataHash, msg.sender);
         return dataHash;
     }
 
-    // 투표 기능 
+    // 투표 기능
     function addVote(string memory tokenType, bytes32 dataHash, bool _like) external Checksub(tokenType) {
         require(tokenWhitelist[tokenType], "token denied");
-        if (keccak256(abi.encodePacked(tokenType)) != keccak256("BTC") && keccak256(abi.encodePacked(tokenType)) != keccak256("ETH")) {
+        if (
+            keccak256(abi.encodePacked(tokenType)) != keccak256("BTC")
+                && keccak256(abi.encodePacked(tokenType)) != keccak256("ETH")
+        ) {
             require(Subscribers[msg.sender][tokenType].subscribe, "you are not subscriber");
         }
 
@@ -101,7 +106,7 @@ contract CV is ERC20 {
         calculateReward(tokenType, dataHash); // 보상 계산
     }
 
-    // 보상 계산 
+    // 보상 계산
     function calculateReward(string memory tokenType, bytes32 dataHash) private {
         Recommend storage _vote = votes[tokenType][dataHash];
         uint256 totalVotes = _vote.good + _vote.bad;
@@ -112,18 +117,18 @@ contract CV is ERC20 {
         }
     }
 
-    // 구독 기능 
+    // 구독 기능
     function subscribe(string memory tokenType) external {
-        if (keccak256(abi.encodePacked(tokenType)) != keccak256("BTC") || keccak256(abi.encodePacked(tokenType)) != keccak256("ETH")) {
+        if (
+            keccak256(abi.encodePacked(tokenType)) != keccak256("BTC")
+                || keccak256(abi.encodePacked(tokenType)) != keccak256("ETH")
+        ) {
             require(balanceOf(msg.sender) >= 2 * (10 ** decimals()), "Not enough CV tokens"); // 2 CV 필요
 
             // CV 토큰 소모
             transferFrom(msg.sender, address(this), 2 * (10 ** decimals()));
 
-            Subscribers[msg.sender][tokenType] = Subscribe({
-                subscribe: true,
-                lastSubscribe: block.timestamp
-            });
+            Subscribers[msg.sender][tokenType] = Subscribe({subscribe: true, lastSubscribe: block.timestamp});
 
             totalSubscriptionAmount += 2 * (10 ** decimals()); // 총 구독료 증가
         }
@@ -131,19 +136,19 @@ contract CV is ERC20 {
         emit Subscribed(tokenType, msg.sender);
     }
 
-    // 보상 분배 기능 
+    // 보상 분배 기능
     function distributeRewards(string memory tokenType, bytes32 dataHash) external {
         Recommend storage _vote = votes[tokenType][dataHash];
 
         address _owner = _vote.owner;
         require(_owner == msg.sender, "you are not owner");
-        
+
         uint256 reward = rewards[_owner];
         require(reward > 0, "No rewards available");
-        
+
         // 보상 지급
         transfer(_owner, reward);
-        
+
         rewards[_owner] = 0; // 보상 초기화
     }
 
